@@ -2,8 +2,7 @@ FROM alpine:latest
 MAINTAINER Salisbury Almeida <sbalmeida@bury.com.br>
 
 ENV TZ America/Sao_Paulo
-ENV PYDIO_VERSION 8.0.1
-ENV HOSTNAME docker.bury.eng.br
+ENV HOSTNAME srvweb.bury.eng.br
 
 RUN apk update \
     && apk upgrade
@@ -98,21 +97,20 @@ RUN apk add --no-cache \
     php7-simplexml \
     php7-xmlwriter
 
-ADD https://download.pydio.com/pub/core/archives/pydio-core-${PYDIO_VERSION}.tar.gz /srv/tmp/
 COPY run.sh /srv/scripts/
 
 ADD http://downloads3.ioncube.com/loader_downloads/ioncube_loaders_lin_x86-64.tar.gz /srv/tmp/
 
 RUN tar -C /srv/tmp/ -xzf /srv/tmp/ioncube_loaders_lin_x86-64.tar.gz \
-    && cp /srv/tmp/ioncube/ioncube_loader_lin_7.1.so /usr/lib/php7/modules/
-
-RUN chmod -R 755 /srv/scripts \
+    && cp /srv/tmp/ioncube/ioncube_loader_lin_7.1.so /usr/lib/php7/modules/ \
+    && chmod -R 755 /srv/scripts \
     && mkdir /run/apache2 \
-    && mkdir /run/php7
+    && mkdir /run/php7 \
+    && sed -rie 's|ServerName srvweb.bury.eng.br:80|ServerName ${HOSTNAME}:80|g' /etc/apache2/httpd.conf \
+    && echo '127.0.0.1 ${HOSTNAME}' >> /etc/hosts
 
-RUN tar -C /srv/tmp/ -xzf /srv/tmp/pydio-core-${PYDIO_VERSION}.tar.gz \
-    && rm -R /var/www/localhost/htdocs \
-    && mv /srv/tmp/pydio-core-${PYDIO_VERSION} /var/www/localhost/htdocs \
+RUN mkdir /var/www/vhosts \
+    && rm /var/www/localhost/htdocs/* \
     && echo '<?php phpinfo(); ?>' > /var/www/localhost/htdocs/info.php \
     && chown -R apache:apache /var/www/localhost/htdocs
 
